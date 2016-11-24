@@ -8,7 +8,7 @@
 
 int main(int argc, char *argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
-    ImApp app("ROM Explorer");
+    ImApp app("GL Fun");
     app.Init();
     app.Run();
     return 0;

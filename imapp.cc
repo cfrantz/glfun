@@ -1,8 +1,10 @@
 #include <gflags/gflags.h>
 #include "imapp.h"
 #include "imgui.h"
-#include "examples/sdl_opengl_example/imgui_impl_sdl.h"
+#include "imwidget/imgui_impl_sdl_gl3.h"
 #include "util/os.h"
+#include "util/logging.h"
+
 
 
 DEFINE_int32(audio_frequency, 48000, "Audio sample frequency");
@@ -15,6 +17,8 @@ ImApp::ImApp(const std::string& name, int width, int height)
   : name_(name),
     width_(width),
     height_(height),
+    running_(false),
+    imgui_open_(true),
     audio_producer_(0),
     audio_consumer_(0)
 {
@@ -25,10 +29,13 @@ ImApp::ImApp(const std::string& name, int width, int height)
              SDL_INIT_JOYSTICK |
              SDL_INIT_GAMECONTROLLER);
 
+
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
 
     window_ = SDL_CreateWindow(name.c_str(),
@@ -38,7 +45,15 @@ ImApp::ImApp(const std::string& name, int width, int height)
                                SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
     glcontext_ = SDL_GL_CreateContext(window_);
-    ImGui_ImplSdl_Init(window_);
+    glewExperimental = GL_TRUE;
+    glewInit();
+
+    const char* renderer = (const char*)glGetString(GL_RENDERER);
+    const char* version = (const char*)glGetString(GL_VERSION);
+    LOG(INFO, "OpenGL renderer: ", renderer);
+    LOG(INFO, "OpenGL version: ", version);
+
+    ImGui_ImplSdlGL3_Init(window_);
     fpsmgr_.SetRate(60);
 
     ///audiobufsz_ = FLAGS_audio_bufsize * 2;
@@ -47,7 +62,7 @@ ImApp::ImApp(const std::string& name, int width, int height)
 }
 
 ImApp::~ImApp() {
-    ImGui_ImplSdl_Shutdown();
+    ImGui_ImplSdlGL3_Shutdown();
     SDL_GL_DeleteContext(glcontext_);
     SDL_DestroyWindow(window_);
     SDL_Quit();
@@ -55,6 +70,7 @@ ImApp::~ImApp() {
 
 void ImApp::Init() {
     RegisterCommand("quit", "Quit the application.", this, &ImApp::Quit);
+    tri_.Init();
 }
 
 void ImApp::Quit(DebugConsole* console, int argc, char **argv) {
@@ -77,7 +93,7 @@ bool ImApp::ProcessEvents() {
     SDL_Event event;
     bool done = false;
     while (SDL_PollEvent(&event)) {
-        ImGui_ImplSdl_ProcessEvent(&event);
+        ImGui_ImplSdlGL3_ProcessEvent(&event);
         if (event.type == SDL_QUIT)
             done = true;
     }
@@ -85,12 +101,11 @@ bool ImApp::ProcessEvents() {
 }
 
 void ImApp::Draw() {
-    static bool open = true;
-    ImVec4 clear_color = ImColor(114, 144, 154);
-    ImGui_ImplSdl_NewFrame(window_);
+    tri_.Draw();
 
+    ImGui_ImplSdlGL3_NewFrame(window_);
     ImGui::SetNextWindowSize(ImVec2(500,300), ImGuiSetCond_FirstUseEver);
-    if (ImGui::Begin(name_.c_str(), &open, ImGuiWindowFlags_MenuBar)) { 
+    if (ImGui::Begin(name_.c_str(), &imgui_open_, ImGuiWindowFlags_MenuBar)) { 
         if (ImGui::BeginMenuBar()) {
             if (ImGui::BeginMenu("Windows")) {
                 ImGui::MenuItem("Debug Console", nullptr,
@@ -101,15 +116,12 @@ void ImApp::Draw() {
         }
         ImGui::Text("Hello World");
     }
-
     console_.Draw();
     ImGui::End();
 
     glViewport(0, 0,
                (int)ImGui::GetIO().DisplaySize.x,
                (int)ImGui::GetIO().DisplaySize.y);
-    glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
-    glClear(GL_COLOR_BUFFER_BIT);
     ImGui::Render();
     SDL_GL_SwapWindow(window_);
 }

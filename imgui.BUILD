@@ -19,18 +19,3 @@ cc_library(
         "stb_truetype.h",
     ],
 )
-
-cc_library(
-    name = "imgui_sdl_opengl",
-    copts = ["-I/usr/include/SDL2"],
-    includes = ["."],
-    hdrs = [
-        "examples/sdl_opengl_example/imgui_impl_sdl.h",
-    ],
-    srcs = [
-        "examples/sdl_opengl_example/imgui_impl_sdl.cpp",
-    ],
-    deps = [
-        ":imgui",
-    ],
-)

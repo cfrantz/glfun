@@ -3,11 +3,13 @@
 #include <memory>
 
 #include <string>
+#include <GL/glew.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
 
 #include "util/fpsmgr.h"
 #include "imwidget/debug_console.h"
+#include "triangle.h"
 
 class ImApp {
   public:
@@ -47,7 +49,9 @@ class ImApp {
     int width_;
     int height_;
     bool running_;
+    bool imgui_open_;
     DebugConsole console_;
+    Triangle tri_;
 
     std::unique_ptr<float[]> audiobuf_;
     int audiobufsz_;

@@ -8,3 +8,20 @@ cc_library(
         "//external:imgui",
     ],
 )
+
+
+cc_library(
+    name = "imgui_sdl_opengl",
+    copts = [
+        "-I/usr/include/SDL2",
+    ],
+    hdrs = [
+        "imgui_impl_sdl_gl3.h",
+    ],
+    srcs = [
+        "imgui_impl_sdl_gl3.cpp",
+    ],
+    deps = [
+        "//external:imgui",
+    ],
+)
